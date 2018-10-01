@@ -1,0 +1,47 @@
+<!DOCTYPE HTML>
+<html lang="pt-BR">
+	<head>
+		<meta charset="utf-8">
+		<title>ChatOnline</title>
+	</head>
+	<style>
+		div {
+			padding: 10px;
+			background-color: #aaa;
+		}
+	</style>
+	<body>
+		<h4>ChatOnline</h4>
+		<div>
+			<a href="#" id="login">Login</a>
+		</div>
+
+		<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase.js"></script>
+		<script>
+		  // Initialize Firebase
+		  var config = {
+		    apiKey: "AIzaSyC2jtUXQ89Y_w_NnxZ_EfT3iVDo35EZVs4",
+		    authDomain: "chatonline-b88c3.firebaseapp.com",
+		    databaseURL: "https://chatonline-b88c3.firebaseio.com",
+		    projectId: "chatonline-b88c3",
+		    storageBucket: "chatonline-b88c3.appspot.com",
+		    messagingSenderId: "187267386216"
+		  };
+		  firebase.initializeApp(config);
+		</script>
+		<script>
+			var linkLogin = document.querySelector('#login');
+			linkLogin.addEventListener('click',login);
+
+			// firebase.auth().currentUser
+			function login() {		      
+		    	var provider = new firebase.auth.GoogleAuthProvider();		        
+	        	provider.addScope('https://www.googleapis.com/auth/plus.login');		        
+	        	firebase.auth().signInWithRedirect(provider);		        
+			}
+			function logout() {
+				firebase.auth().signOut();		        
+			}
+		</script>
+	</body>
+</html>
