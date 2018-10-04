@@ -5,16 +5,117 @@
 		<title>ChatOnline</title>
 	</head>
 	<style>
-		div {
-			padding: 10px;
+		img {
+			width: 24px;
+			margin: 12px 16px 0 0;
+			padding: 0;
+			float: left;
+			display: none;
+		}
+
+		nav {
+			min-height: 48px;
+			line-height: 48px;
 			background-color: #aaa;
+			padding-left: 8px;
+		}
+		nav a {
+			display: none;
+		}
+		nav span {
+			display: none;
+		}
+
+		.visivel {
+			display: inline;
+		}
+
+		.img-visivel {
+			display: block;
+		}
+
+		main {
+			display: none;
+		}
+
+		main div.lista {
+			float: left;
+			box-sizing: border-box;
+			min-width: 30%;
+			min-height: 39px;
+			background-color: #eee;
+		}
+
+		main div.lista > img {
+			margin: 6px 10px 0 10px;
+			display: block;
+		}
+
+		main div.lista a.usuario {
+			line-height: 38px;
+			display: block;
+			box-sizing: border-box;
+			width: 100%;
+			border-bottom: 1px solid black;
+			background-color: #eee;
+			padding-left: 10px;
+		}
+
+		main div.chat {
+			margin: 0;
+			display: block;
+			float: left;
+			box-sizing: border-box;
+			width: 70%;
+			font-size: 1.0em;
+		}
+
+		main div.chat input[type=text] {
+			display: block;
+			float: left;
+			box-sizing: border-box;
+			width: 100%;
+			background: #ded4d4;
+		  	border-left: 10px solid #aaa;
+			font-size: 1.2em;
+			padding: 0.5em 10px;
+		}
+
+		main div.chat textarea {
+			display: block;
+			float: left;
+			min-height: 220px;
+			box-sizing: border-box;
+			width: 100%;
+		  	background: #f9f9f9;
+			border: 0;
+		  	border-left: 10px solid #ccc;
+		  	padding: 0.5em 10px;
+			overflow-x: hidden;
+			overflow-y: scroll;
+			resize: none;
 		}
 	</style>
 	<body>
 		<h4>ChatOnline</h4>
-		<div>
+		<nav>
+			<img id="aguardeLogin" src="img/loading.gif" alt="Loading" />
 			<a href="#" id="login">Login</a>
-		</div>
+			<span id="usuario-logado">Usuário: </span>
+			<a href="#" id="logout">Logout</a>
+		</nav>
+
+		<main>
+			<div class="lista">
+				<img id="aguardeUsuarios" src="img/loading.gif" alt="Loading" />
+			</div>
+			<div class="chat">
+				<form id="formulario">
+					<input id="mensagem" type="text" placeholder="Digite sua mensagem..." />
+				</form>
+				<textarea readonly></textarea>
+			</div>
+		</main>
 
 		<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase.js"></script>
 		<script>
@@ -30,17 +131,119 @@
 		  firebase.initializeApp(config);
 		</script>
 		<script>
-			var linkLogin = document.querySelector('#login');
-			linkLogin.addEventListener('click',login);
+			let iniciaisUsuario = undefined;
 
-			// firebase.auth().currentUser
-			function login() {		      
-		    	var provider = new firebase.auth.GoogleAuthProvider();		        
-	        	provider.addScope('https://www.googleapis.com/auth/plus.login');		        
-	        	firebase.auth().signInWithRedirect(provider);		        
+			let linkLogin = document.querySelector('#login');
+			linkLogin.addEventListener('click',login);
+			let linkLogout = document.querySelector('#logout');
+			linkLogout.addEventListener('click',logout);
+			let spanUsuarioLogado = document.querySelector('#usuario-logado');
+
+			let imgAguardeLogin = document.querySelector('#aguardeLogin');
+			imgAguardeLogin.classList.add('img-visivel');
+
+			let imgAguardeUsuarios = document.querySelector('#aguardeUsuarios');
+
+			let main = document.querySelector('main');
+			let divLista = document.querySelector('main > div.lista');
+
+			let textarea = document.querySelector('textarea');
+
+			let formulario = document.querySelector('#formulario');
+			formulario.addEventListener('submit',function(event){
+				event.preventDefault();
+
+				let json = {
+					text: iniciaisUsuario + ' > ' + event.target.mensagem.value,
+					timestamp: Date()
+				};
+				firebase.database().ref('messages/' + guid()).set(json);
+				event.target.mensagem.value = '';
+			});
+
+			obterNomeUsuarioLogado(function(user){
+				imgAguardeLogin.classList.remove('img-visivel');
+				spanUsuarioLogado.classList.add('visivel');
+				spanUsuarioLogado.textContent = user.displayName + ' - ';
+				linkLogout.classList.add('visivel');
+				main.classList.add('visivel');
+				salvarUsuario(user);
+			},function(){
+				imgAguardeLogin.classList.remove('img-visivel');
+				linkLogin.classList.add('visivel');
+			});
+
+			let todosUsuarios = firebase.database().ref("users");
+			todosUsuarios.on('value',function(snapshot) {
+				let lista = snapshot.val();
+				Object.keys(lista).forEach((key,index,array) => {
+					let nome = lista[key].displayName;
+
+					let aUsuario = document.createElement('a');
+					aUsuario.classList.add('usuario');
+					aUsuario.href = '#';
+					aUsuario.textContent = nome;
+
+					aUsuario.addEventListener('click',function(event){
+						// Se for necessario criar algum evento ao clicar nos usuarios
+					});
+
+					divLista.appendChild(aUsuario);
+
+					if (index == (array.length-1)) {
+						imgAguardeUsuarios.style.display = 'none';
+					}
+				});
+			});
+
+			firebase.database().ref("messages").endAt().on('child_added', function(snapshot) {
+			   let json = snapshot.val();
+			   textarea.textContent = json.text + '\n' + textarea.textContent;
+			});
+
+			/* Funções de apoio */
+			function salvarUsuario(user) {
+				iniciaisUsuario = '';
+				user.displayName.split(' ').forEach(entry => {
+					iniciaisUsuario += entry.charAt(0).toUpperCase();
+				});
+
+				firebase.database().ref('users/' + user.uid).set({
+					displayName: user.displayName,
+					email: user.email,
+					photoURL: user.photoURL
+				});
+			}
+
+			// https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+			function guid() {
+				function s4() {
+			    	return Math.floor((1 + Math.random()) * 0x10000)
+			      		.toString(16)
+			      		.substring(1);
+			  		}
+			  	return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+			}
+
+			function obterNomeUsuarioLogado(sucesso,falha) {
+				firebase.auth().onAuthStateChanged(function(user) {
+				  if (user) {
+				    sucesso(user);
+				  } else {
+				    falha();
+				  }
+				});
+			}
+			function login() {
+		    	let provider = new firebase.auth.GoogleAuthProvider();
+	        	provider.addScope('https://www.googleapis.com/auth/plus.login');
+	        	firebase.auth().signInWithRedirect(provider);
 			}
 			function logout() {
-				firebase.auth().signOut();		        
+				spanUsuarioLogado.classList.remove('visivel');
+				linkLogout.classList.remove('visivel');
+				main.classList.remove('visivel');
+				firebase.auth().signOut();
 			}
 		</script>
 	</body>
